@@ -8,27 +8,37 @@ import (
 
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	err := templates.ExecuteTemplate(w, "index.html", nil)
-
+func renderTemplate(w http.ResponseWriter, tmpl string) {
+	err := templates.ExecuteTemplate(w, tmpl, nil)
 	if err != nil {
-		http.Error(w, "Erreur chargement page", http.StatusInternalServerError)
-		return
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 	}
 }
 
-func main() {
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	renderTemplate(w, "index.html")
+}
 
-	fs := http.FileServer(http.Dir("./static"))
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	renderTemplate(w, "login.html")
+}
+
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	renderTemplate(w, "register.html")
+}
+
+func main() {
+	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	http.HandleFunc("/", homeHandler)
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/register", registerHandler)
 
 	log.Println("Serveur lancé sur http://localhost:8080")
-
-	err := http.ListenAndServe(":8080", nil)
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
