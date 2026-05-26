@@ -4,12 +4,15 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+
+	"forum-project/internal/database"
 )
 
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 func renderTemplate(w http.ResponseWriter, tmpl string) {
 	err := templates.ExecuteTemplate(w, tmpl, nil)
+
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 	}
@@ -20,6 +23,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+
 	renderTemplate(w, "index.html")
 }
 
@@ -32,6 +36,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
+	database.InitDatabase()
+
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
@@ -40,5 +47,10 @@ func main() {
 	http.HandleFunc("/register", registerHandler)
 
 	log.Println("Serveur lancé sur http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+
+	err := http.ListenAndServe(":8080", nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
