@@ -9,11 +9,11 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 )
+
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 func renderTemplate(w http.ResponseWriter, tmpl string) {
 	err := templates.ExecuteTemplate(w, tmpl, nil)
-
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 	}
@@ -29,18 +29,54 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	renderTemplate(w, "login.html")
+	if r.Method == http.MethodGet {
+		renderTemplate(w, "login.html")
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		email := r.FormValue("email")
+		password := r.FormValue("password")
+
+		if email == "" || password == "" {
+			http.Error(w, "Email et mot de passe obligatoires", http.StatusBadRequest)
+			return
+		}
+
+		var id int
+		var username string
+		var hashedPassword string
+
+		err := database.DB.QueryRow(
+			"SELECT id, username, password FROM users WHERE email = ?",
+			email,
+		).Scan(&id, &username, &hashedPassword)
+
+		if err != nil {
+			http.Error(w, "Identifiants incorrects", http.StatusUnauthorized)
+			return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+		if err != nil {
+			http.Error(w, "Identifiants incorrects", http.StatusUnauthorized)
+			return
+		}
+
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method == http.MethodGet {
 		renderTemplate(w, "register.html")
 		return
 	}
 
 	if r.Method == http.MethodPost {
-
 		username := r.FormValue("username")
 		email := r.FormValue("email")
 		password := r.FormValue("password")
@@ -51,7 +87,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
 		if err != nil {
 			http.Error(w, "Erreur hash mot de passe", http.StatusInternalServerError)
 			return
