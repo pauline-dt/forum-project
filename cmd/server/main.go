@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -14,12 +15,14 @@ var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 func renderTemplate(w http.ResponseWriter, tmpl string) {
 	err := templates.ExecuteTemplate(w, tmpl, nil)
+
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 	}
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
+
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
@@ -29,12 +32,14 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
+
 	if r.Method == http.MethodGet {
 		renderTemplate(w, "login.html")
 		return
 	}
 
 	if r.Method == http.MethodPost {
+
 		email := r.FormValue("email")
 		password := r.FormValue("password")
 
@@ -58,10 +63,21 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+
 		if err != nil {
 			http.Error(w, "Identifiants incorrects", http.StatusUnauthorized)
 			return
 		}
+
+		cookie := &http.Cookie{
+			Name:     "session_user_id",
+			Value:    fmt.Sprintf("%d", id),
+			Path:     "/",
+			MaxAge:   3600,
+			HttpOnly: true,
+		}
+
+		http.SetCookie(w, cookie)
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -71,12 +87,14 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
+
 	if r.Method == http.MethodGet {
 		renderTemplate(w, "register.html")
 		return
 	}
 
 	if r.Method == http.MethodPost {
+
 		username := r.FormValue("username")
 		email := r.FormValue("email")
 		password := r.FormValue("password")
@@ -87,6 +105,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
 		if err != nil {
 			http.Error(w, "Erreur hash mot de passe", http.StatusInternalServerError)
 			return
@@ -111,7 +130,23 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
 }
 
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+
+	cookie := &http.Cookie{
+		Name:     "session_user_id",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, cookie)
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func main() {
+
 	database.InitDatabase()
 
 	fs := http.FileServer(http.Dir("static"))
@@ -120,10 +155,12 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/logout", logoutHandler)
 
 	log.Println("Serveur lancé sur http://localhost:8080")
 
 	err := http.ListenAndServe(":8080", nil)
+
 	if err != nil {
 		log.Fatal(err)
 	}

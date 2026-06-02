@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Accueil - Nexora</title>
+    <title>Nexora</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -19,7 +19,41 @@
 <main class="hero">
     <section class="hero-card">
         <h1>Bienvenue sur Nexora</h1>
-        <p>Un forum pour échanger, publier, commenter et réagir aux posts.</p>
+        <p>Un forum moderne pour échanger, publier, commenter et réagir aux posts.</p>
+
+        <input id="searchInput" class="search-bar" type="text" placeholder="Rechercher une discussion...">
+
+        <div class="dashboard">
+            <div class="stat-card">
+                <h2 id="postsCount">0</h2>
+                <p>Posts</p>
+            </div>
+            <div class="stat-card">
+                <h2 id="usersCount">0</h2>
+                <p>Utilisateurs</p>
+            </div>
+            <div class="stat-card">
+                <h2 id="commentsCount">0</h2>
+                <p>Commentaires</p>
+            </div>
+        </div>
+
+        <div id="postsList" class="posts-list">
+            <article class="post-card" data-title="Présentation du projet Nexora">
+                <h3>Présentation du projet Nexora</h3>
+                <p>Bienvenue dans notre forum étudiant développé en Go, SQLite et JavaScript.</p>
+            </article>
+
+            <article class="post-card" data-title="Discussion autour du développement web">
+                <h3>Discussion autour du développement web</h3>
+                <p>Ici on parle HTML, CSS, JavaScript, backend et bonnes pratiques.</p>
+            </article>
+
+            <article class="post-card" data-title="Aide et entraide entre étudiants">
+                <h3>Aide et entraide entre étudiants</h3>
+                <p>Posez vos questions et échangez avec les autres utilisateurs.</p>
+            </article>
+        </div>
 
         <div class="hero-actions">
             <a href="/register" class="btn-primary">Créer un compte</a>
@@ -28,5 +62,6 @@
     </section>
 </main>
 
+<script src="/static/js/main.js"></script>
 </body>
 </html>
