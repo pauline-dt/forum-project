@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Créer un post - Nexora</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+    <div class="logo">Nexora</div>
+    <nav>
+        <a href="/">Accueil</a>
+        <a href="/logout">Déconnexion</a>
+    </nav>
+</header>
+
+<main class="form-page">
+    <form class="form-card" method="POST" action="/create-post">
+        <h1>Créer un post</h1>
+
+        <input type="text" name="title" placeholder="Titre du post" required>
+
+        <textarea name="content" placeholder="Contenu du post" required></textarea>
+
+        <select name="category" required>
+            <option value="">Choisir une catégorie</option>
+            <option value="1">Général</option>
+            <option value="2">Développement</option>
+            <option value="3">Aide</option>
+            <option value="4">Projet</option>
+            <option value="5">Discussion</option>
+        </select>
+
+        <button type="submit">Publier</button>
+    </form>
+</main>
+
+</body>
+</html>

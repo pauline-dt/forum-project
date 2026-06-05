@@ -10,10 +10,16 @@
 <header class="navbar">
     <div class="logo">Nexora</div>
     <nav>
-        <a href="/">Accueil</a>
+    <a href="/">Accueil</a>
+
+    {{if .IsLoggedIn}}
+        <a href="/create-post">Créer un post</a>
+        <a href="/logout" class="btn-nav">Déconnexion</a>
+    {{else}}
         <a href="/login">Connexion</a>
         <a href="/register" class="btn-nav">Inscription</a>
-    </nav>
+    {{end}}
+</nav>
 </header>
 
 <main class="hero">
@@ -56,9 +62,14 @@
         </div>
 
         <div class="hero-actions">
-            <a href="/register" class="btn-primary">Créer un compte</a>
-            <a href="/login" class="btn-secondary">Se connecter</a>
-        </div>
+    {{if .IsLoggedIn}}
+        <a href="/create-post" class="btn-primary">Créer un post</a>
+        <a href="/logout" class="btn-secondary">Se déconnecter</a>
+    {{else}}
+        <a href="/register" class="btn-primary">Créer un compte</a>
+        <a href="/login" class="btn-secondary">Se connecter</a>
+    {{end}}
+</div>
     </section>
 </main>
 

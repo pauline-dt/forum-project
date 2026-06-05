@@ -193,3 +193,17 @@ button {
     margin-bottom: 8px;
     color: #ffd166;
 }
+
+textarea,
+select {
+    padding: 14px;
+    border: 2px solid #eee;
+    border-radius: 12px;
+    font-size: 16px;
+    font-family: Arial, sans-serif;
+}
+
+textarea {
+    min-height: 130px;
+    resize: vertical;
+}

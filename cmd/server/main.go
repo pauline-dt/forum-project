@@ -12,7 +12,10 @@ import (
 )
 
 var templates = template.Must(template.ParseGlob("templates/*.html"))
+type PageData struct {
+	IsLoggedIn bool
 
+}
 func renderTemplate(w http.ResponseWriter, tmpl string) {
 	err := templates.ExecuteTemplate(w, tmpl, nil)
 
@@ -28,7 +31,16 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderTemplate(w, "index.html")
+	_, isLoggedIn := getUserIDFromCookie(r)
+
+	data := PageData{
+		IsLoggedIn: isLoggedIn,
+	}
+
+	err := templates.ExecuteTemplate(w, "index.html", data)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+	}
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -145,6 +157,78 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func getUserIDFromCookie(r *http.Request) (string, bool) {
+	cookie, err := r.Cookie("session_user_id")
+	if err != nil {
+		return "", false
+	}
+
+	if cookie.Value == "" {
+		return "", false
+	}
+
+	return cookie.Value, true
+}
+
+func createPostHandler(w http.ResponseWriter, r *http.Request) {
+	userID, isLoggedIn := getUserIDFromCookie(r)
+
+	if !isLoggedIn {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		renderTemplate(w, "create_post.html")
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		title := r.FormValue("title")
+		content := r.FormValue("content")
+		categoryID := r.FormValue("category")
+
+		if title == "" || content == "" || categoryID == "" {
+			http.Error(w, "Tous les champs sont obligatoires", http.StatusBadRequest)
+			return
+		}
+
+		result, err := database.DB.Exec(
+			"INSERT INTO posts(user_id, title, content) VALUES(?, ?, ?)",
+			userID,
+			title,
+			content,
+		)
+
+		if err != nil {
+			http.Error(w, "Erreur création du post", http.StatusInternalServerError)
+			return
+		}
+
+		postID, err := result.LastInsertId()
+		if err != nil {
+			http.Error(w, "Erreur récupération du post", http.StatusInternalServerError)
+			return
+		}
+
+		_, err = database.DB.Exec(
+			"INSERT INTO post_categories(post_id, category_id) VALUES(?, ?)",
+			postID,
+			categoryID,
+		)
+
+		if err != nil {
+			http.Error(w, "Erreur association catégorie", http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+}
+
 func main() {
 
 	database.InitDatabase()
@@ -156,6 +240,7 @@ func main() {
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/create-post", createPostHandler)
 
 	log.Println("Serveur lancé sur http://localhost:8080")
 
