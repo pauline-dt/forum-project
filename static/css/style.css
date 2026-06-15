@@ -207,3 +207,106 @@ textarea {
     min-height: 130px;
     resize: vertical;
 }
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.category-badge {
+    background: #ffd166;
+    color: #222;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.post-image {
+    width: 100%;
+    max-height: 350px;
+    object-fit: cover;
+    border-radius: 18px;
+    margin: 15px 0;
+}
+
+.reaction-bar {
+    display: flex;
+    gap: 12px;
+    margin: 15px 0;
+}
+
+.reaction-btn {
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    background: white;
+    color: #764ba2;
+    font-weight: bold;
+}
+
+.comments {
+    margin-top: 15px;
+}
+
+.comment {
+    background: rgba(255,255,255,0.16);
+    padding: 10px;
+    border-radius: 12px;
+    margin-top: 8px;
+}
+
+.comment-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.comment-form input {
+    flex: 1;
+}
+
+.post-card small {
+    display: block;
+    margin: 10px 0;
+    opacity: 0.9;
+}
+
+.comment strong {
+    color: #ffd166;
+}
+
+.comment p {
+    font-size: 15px;
+    margin: 5px 0 0;
+}
+
+.comment-form button {
+    width: auto;
+    white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+    .hero-card {
+        padding: 30px;
+    }
+
+    .hero-card h1 {
+        font-size: 36px;
+    }
+
+    .navbar {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    nav a {
+        margin-left: 10px;
+    }
+
+    .comment-form {
+        flex-direction: column;
+    }
+}

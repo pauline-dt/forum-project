@@ -11,17 +11,17 @@
     <div class="logo">Nexora</div>
     <nav>
         <a href="/">Accueil</a>
-        <a href="/logout">Déconnexion</a>
+        <a href="/logout" class="btn-nav">Déconnexion</a>
     </nav>
 </header>
 
 <main class="form-page">
-    <form class="form-card" method="POST" action="/create-post">
+    <form class="form-card" method="POST" action="/create-post" enctype="multipart/form-data">
         <h1>Créer un post</h1>
 
         <input type="text" name="title" placeholder="Titre du post" required>
 
-        <textarea name="content" placeholder="Contenu du post" required></textarea>
+        <textarea name="content" placeholder="Que veux-tu partager ?" required></textarea>
 
         <select name="category" required>
             <option value="">Choisir une catégorie</option>
@@ -31,6 +31,8 @@
             <option value="4">Projet</option>
             <option value="5">Discussion</option>
         </select>
+
+        <input type="file" name="image" accept="image/png, image/jpeg, image/gif">
 
         <button type="submit">Publier</button>
     </form>

@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"forum-project/internal/database"
 	"forum-project/internal/models"
@@ -14,20 +17,28 @@ import (
 )
 
 var templates = template.Must(template.ParseGlob("templates/*.html"))
+
 type PageData struct {
 	IsLoggedIn bool
-	Posts      []models.Post
 }
+
 func renderTemplate(w http.ResponseWriter, tmpl string) {
 	err := templates.ExecuteTemplate(w, tmpl, nil)
-
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 	}
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
+func getUserIDFromCookie(r *http.Request) (string, bool) {
+	cookie, err := r.Cookie("session_user_id")
+	if err != nil || cookie.Value == "" {
+		return "", false
+	}
 
+	return cookie.Value, true
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
@@ -35,56 +46,23 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, isLoggedIn := getUserIDFromCookie(r)
 
-	rows, err := database.DB.Query(
-		"SELECT id, title, content FROM posts ORDER BY id DESC",
-	)
-
-	if err != nil {
-		http.Error(w, "Erreur récupération posts", http.StatusInternalServerError)
-		return
-	}
-
-	defer rows.Close()
-
-	var posts []models.Post
-
-	for rows.Next() {
-		var post models.Post
-
-		err := rows.Scan(
-			&post.ID,
-			&post.Title,
-			&post.Content,
-		)
-
-		if err != nil {
-			continue
-		}
-
-		posts = append(posts, post)
-	}
-
 	data := PageData{
 		IsLoggedIn: isLoggedIn,
-		Posts:      posts,
 	}
 
-	err = templates.ExecuteTemplate(w, "index.html", data)
-
+	err := templates.ExecuteTemplate(w, "index.html", data)
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 	}
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method == http.MethodGet {
 		renderTemplate(w, "login.html")
 		return
 	}
 
 	if r.Method == http.MethodPost {
-
 		email := r.FormValue("email")
 		password := r.FormValue("password")
 
@@ -94,13 +72,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var id int
-		var username string
 		var hashedPassword string
 
 		err := database.DB.QueryRow(
-			"SELECT id, username, password FROM users WHERE email = ?",
+			"SELECT id, password FROM users WHERE email = ?",
 			email,
-		).Scan(&id, &username, &hashedPassword)
+		).Scan(&id, &hashedPassword)
 
 		if err != nil {
 			http.Error(w, "Identifiants incorrects", http.StatusUnauthorized)
@@ -108,7 +85,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-
 		if err != nil {
 			http.Error(w, "Identifiants incorrects", http.StatusUnauthorized)
 			return
@@ -123,7 +99,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.SetCookie(w, cookie)
-
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
@@ -132,14 +107,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method == http.MethodGet {
 		renderTemplate(w, "register.html")
 		return
 	}
 
 	if r.Method == http.MethodPost {
-
 		username := r.FormValue("username")
 		email := r.FormValue("email")
 		password := r.FormValue("password")
@@ -150,7 +123,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
 		if err != nil {
 			http.Error(w, "Erreur hash mot de passe", http.StatusInternalServerError)
 			return
@@ -176,7 +148,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-
 	cookie := &http.Cookie{
 		Name:     "session_user_id",
 		Value:    "",
@@ -186,26 +157,11 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, cookie)
-
 	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-func getUserIDFromCookie(r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("session_user_id")
-	if err != nil {
-		return "", false
-	}
-
-	if cookie.Value == "" {
-		return "", false
-	}
-
-	return cookie.Value, true
 }
 
 func createPostHandler(w http.ResponseWriter, r *http.Request) {
 	userID, isLoggedIn := getUserIDFromCookie(r)
-
 	if !isLoggedIn {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -217,6 +173,12 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
+		err := r.ParseMultipartForm(20 << 20)
+		if err != nil {
+			http.Error(w, "Fichier trop volumineux", http.StatusBadRequest)
+			return
+		}
+
 		title := r.FormValue("title")
 		content := r.FormValue("content")
 		categoryID := r.FormValue("category")
@@ -226,11 +188,49 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		imagePath := ""
+
+		file, handler, err := r.FormFile("image")
+		if err == nil {
+			defer file.Close()
+
+			ext := filepath.Ext(handler.Filename)
+			if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
+				http.Error(w, "Format image non autorisé", http.StatusBadRequest)
+				return
+			}
+
+			err = os.MkdirAll("static/uploads", os.ModePerm)
+			if err != nil {
+				http.Error(w, "Erreur création dossier upload", http.StatusInternalServerError)
+				return
+			}
+
+			fileName := fmt.Sprintf("%d%s", os.Getpid()+len(handler.Filename), ext)
+			savePath := filepath.Join("static/uploads", fileName)
+
+			dst, err := os.Create(savePath)
+			if err != nil {
+				http.Error(w, "Erreur sauvegarde image", http.StatusInternalServerError)
+				return
+			}
+			defer dst.Close()
+
+			_, err = io.Copy(dst, file)
+			if err != nil {
+				http.Error(w, "Erreur copie image", http.StatusInternalServerError)
+				return
+			}
+
+			imagePath = "/static/uploads/" + fileName
+		}
+
 		result, err := database.DB.Exec(
-			"INSERT INTO posts(user_id, title, content) VALUES(?, ?, ?)",
+			"INSERT INTO posts(user_id, title, content, image_path) VALUES(?, ?, ?, ?)",
 			userID,
 			title,
 			content,
+			imagePath,
 		)
 
 		if err != nil {
@@ -261,17 +261,28 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
 }
+
 func apiPostsHandler(w http.ResponseWriter, r *http.Request) {
 	rows, err := database.DB.Query(`
-		SELECT 
+		SELECT
 			posts.id,
 			posts.title,
 			posts.content,
 			users.username,
 			IFNULL(categories.name, ''),
 			IFNULL(posts.image_path, ''),
-			0,
-			0
+			(
+				SELECT COUNT(*)
+				FROM reactions
+				WHERE reactions.post_id = posts.id
+				AND reactions.type = 'like'
+			),
+			(
+				SELECT COUNT(*)
+				FROM reactions
+				WHERE reactions.post_id = posts.id
+				AND reactions.type = 'dislike'
+			)
 		FROM posts
 		JOIN users ON posts.user_id = users.id
 		LEFT JOIN post_categories ON posts.id = post_categories.post_id
@@ -283,7 +294,6 @@ func apiPostsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Erreur récupération posts", http.StatusInternalServerError)
 		return
 	}
-
 	defer rows.Close()
 
 	var posts []models.Post
@@ -307,12 +317,32 @@ func apiPostsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		commentRows, err := database.DB.Query(`
+			SELECT comments.id, users.username, comments.content
+			FROM comments
+			JOIN users ON comments.user_id = users.id
+			WHERE comments.post_id = ?
+			ORDER BY comments.created_at ASC
+		`, post.ID)
+
+		if err == nil {
+			for commentRows.Next() {
+				var comment models.Comment
+				err := commentRows.Scan(&comment.ID, &comment.Author, &comment.Content)
+				if err == nil {
+					post.Comments = append(post.Comments, comment)
+				}
+			}
+			commentRows.Close()
+		}
+
 		posts = append(posts, post)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
 }
+
 func apiAddCommentHandler(w http.ResponseWriter, r *http.Request) {
 	userID, isLoggedIn := getUserIDFromCookie(r)
 	if !isLoggedIn {
@@ -348,8 +378,53 @@ func apiAddCommentHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func main() {
+func apiReactHandler(w http.ResponseWriter, r *http.Request) {
+	userID, isLoggedIn := getUserIDFromCookie(r)
+	if !isLoggedIn {
+		http.Error(w, "Vous devez être connecté", http.StatusUnauthorized)
+		return
+	}
 
+	if r.Method != http.MethodPost {
+		http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+		return
+	}
+
+	postID := r.FormValue("post_id")
+	reactionType := r.FormValue("type")
+
+	if postID == "" || (reactionType != "like" && reactionType != "dislike") {
+		http.Error(w, "Réaction invalide", http.StatusBadRequest)
+		return
+	}
+
+	_, err := database.DB.Exec(
+		"DELETE FROM reactions WHERE user_id = ? AND post_id = ?",
+		userID,
+		postID,
+	)
+
+	if err != nil {
+		http.Error(w, "Erreur suppression ancienne réaction", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = database.DB.Exec(
+		"INSERT INTO reactions(user_id, post_id, type) VALUES(?, ?, ?)",
+		userID,
+		postID,
+		reactionType,
+	)
+
+	if err != nil {
+		http.Error(w, "Erreur ajout réaction", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func main() {
 	database.InitDatabase()
 
 	fs := http.FileServer(http.Dir("static"))
@@ -360,13 +435,14 @@ func main() {
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/create-post", createPostHandler)
+
 	http.HandleFunc("/api/posts", apiPostsHandler)
 	http.HandleFunc("/api/comments/add", apiAddCommentHandler)
+	http.HandleFunc("/api/react", apiReactHandler)
 
 	log.Println("Serveur lancé sur http://localhost:8080")
 
 	err := http.ListenAndServe(":8080", nil)
-
 	if err != nil {
 		log.Fatal(err)
 	}

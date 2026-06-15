@@ -9,73 +9,67 @@
 
 <header class="navbar">
     <div class="logo">Nexora</div>
-    <nav>
-    <a href="/">Accueil</a>
 
-    {{if .IsLoggedIn}}
-        <a href="/create-post">Créer un post</a>
-        <a href="/logout" class="btn-nav">Déconnexion</a>
-    {{else}}
-        <a href="/login">Connexion</a>
-        <a href="/register" class="btn-nav">Inscription</a>
-    {{end}}
-</nav>
+    <nav>
+        <a href="/">Accueil</a>
+
+        {{if .IsLoggedIn}}
+            <a href="/create-post">Créer un post</a>
+            <a href="/logout" class="btn-nav">Déconnexion</a>
+        {{else}}
+            <a href="/login">Connexion</a>
+            <a href="/register" class="btn-nav">Inscription</a>
+        {{end}}
+    </nav>
 </header>
 
 <main class="hero">
     <section class="hero-card">
         <h1>Bienvenue sur Nexora</h1>
-        <p>Un forum moderne pour échanger, publier, commenter et réagir aux posts.</p>
+        <p>Le forum moderne pour publier, commenter, liker et échanger.</p>
 
         <input id="searchInput" class="search-bar" type="text" placeholder="Rechercher une discussion...">
+
+        <select id="categoryFilter" class="search-bar">
+            <option value="">Toutes les catégories</option>
+            <option value="Général">Général</option>
+            <option value="Développement">Développement</option>
+            <option value="Aide">Aide</option>
+            <option value="Projet">Projet</option>
+            <option value="Discussion">Discussion</option>
+        </select>
 
         <div class="dashboard">
             <div class="stat-card">
                 <h2 id="postsCount">0</h2>
                 <p>Posts</p>
             </div>
+
             <div class="stat-card">
                 <h2 id="usersCount">0</h2>
                 <p>Utilisateurs</p>
             </div>
+
             <div class="stat-card">
                 <h2 id="commentsCount">0</h2>
                 <p>Commentaires</p>
             </div>
         </div>
 
-        <div id="postsList" class="posts-list">
-
-    {{range .Posts}}
-
-    <article class="post-card">
-        <h3>{{.Title}}</h3>
-        <p>{{.Content}}</p>
-    </article>
-
-    {{else}}
-
-    <article class="post-card">
-        <h3>Aucun post</h3>
-        <p>Soyez le premier à publier sur Nexora.</p>
-    </article>
-
-    {{end}}
-
-</div>
+        <div id="postsList" class="posts-list"></div>
 
         <div class="hero-actions">
-    {{if .IsLoggedIn}}
-        <a href="/create-post" class="btn-primary">Créer un post</a>
-        <a href="/logout" class="btn-secondary">Se déconnecter</a>
-    {{else}}
-        <a href="/register" class="btn-primary">Créer un compte</a>
-        <a href="/login" class="btn-secondary">Se connecter</a>
-    {{end}}
-</div>
+            {{if .IsLoggedIn}}
+                <a href="/create-post" class="btn-primary">Créer un post</a>
+                <a href="/logout" class="btn-secondary">Se déconnecter</a>
+            {{else}}
+                <a href="/register" class="btn-primary">Créer un compte</a>
+                <a href="/login" class="btn-secondary">Se connecter</a>
+            {{end}}
+        </div>
     </section>
 </main>
 
-<script src="/static/js/main.js"></script>
+<script src="/static/js/main.js?v=999"></script>
 </body>
 </html>
