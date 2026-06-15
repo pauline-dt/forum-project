@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Nexora</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+
+    <link rel="stylesheet" href="/static/css/style.css?v=2026">
 </head>
+
 <body>
 
 <header class="navbar">
@@ -25,21 +27,39 @@
 
 <main class="hero">
     <section class="hero-card">
-        <h1>Bienvenue sur Nexora</h1>
-        <p>Le forum moderne pour publier, commenter, liker et échanger.</p>
 
-        <input id="searchInput" class="search-bar" type="text" placeholder="Rechercher une discussion...">
+        <h1>Bienvenue sur Nexora</h1>
+
+        <p>
+            Le forum moderne pour publier, commenter,
+            liker et échanger.
+        </p>
+
+        <input
+            id="searchInput"
+            class="search-bar"
+            type="text"
+            placeholder="Rechercher une discussion..."
+        >
 
         <select id="categoryFilter" class="search-bar">
-            <option value="">Toutes les catégories</option>
-            <option value="Général">Général</option>
-            <option value="Développement">Développement</option>
-            <option value="Aide">Aide</option>
-            <option value="Projet">Projet</option>
-            <option value="Discussion">Discussion</option>
-        </select>
+    <option value="">Toutes les catégories</option>
+    <option value="Général">Général</option>
+    <option value="Développement">Développement</option>
+    <option value="Aide">Aide</option>
+    <option value="Projet">Projet</option>
+    <option value="Discussion">Discussion</option>
+    <option value="Sport">Sport</option>
+    <option value="Lifestyle">Lifestyle</option>
+    <option value="Musique">Musique</option>
+    <option value="Gaming">Gaming</option>
+    <option value="Cinéma">Cinéma</option>
+    <option value="Voyage">Voyage</option>
+    <option value="Études">Études</option>
+</select>
 
         <div class="dashboard">
+
             <div class="stat-card">
                 <h2 id="postsCount">0</h2>
                 <p>Posts</p>
@@ -54,22 +74,37 @@
                 <h2 id="commentsCount">0</h2>
                 <p>Commentaires</p>
             </div>
+
         </div>
 
         <div id="postsList" class="posts-list"></div>
 
         <div class="hero-actions">
+
             {{if .IsLoggedIn}}
-                <a href="/create-post" class="btn-primary">Créer un post</a>
-                <a href="/logout" class="btn-secondary">Se déconnecter</a>
+                <a href="/create-post" class="btn-primary">
+                    Créer un post
+                </a>
+
+                <a href="/logout" class="btn-secondary">
+                    Se déconnecter
+                </a>
             {{else}}
-                <a href="/register" class="btn-primary">Créer un compte</a>
-                <a href="/login" class="btn-secondary">Se connecter</a>
+                <a href="/register" class="btn-primary">
+                    Créer un compte
+                </a>
+
+                <a href="/login" class="btn-secondary">
+                    Se connecter
+                </a>
             {{end}}
+
         </div>
+
     </section>
 </main>
 
-<script src="/static/js/main.js?v=999"></script>
+<script src="/static/js/main.js?v=2026"></script>
+
 </body>
 </html>

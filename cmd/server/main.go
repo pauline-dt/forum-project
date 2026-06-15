@@ -328,11 +328,18 @@ func apiPostsHandler(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			for commentRows.Next() {
 				var comment models.Comment
-				err := commentRows.Scan(&comment.ID, &comment.Author, &comment.Content)
+
+				err := commentRows.Scan(
+					&comment.ID,
+					&comment.Author,
+					&comment.Content,
+				)
+
 				if err == nil {
 					post.Comments = append(post.Comments, comment)
 				}
 			}
+
 			commentRows.Close()
 		}
 
@@ -424,6 +431,26 @@ func apiReactHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+func apiStatsHandler(w http.ResponseWriter, r *http.Request) {
+	var usersCount int
+
+	err := database.DB.QueryRow(
+		"SELECT COUNT(*) FROM users",
+	).Scan(&usersCount)
+
+	if err != nil {
+		http.Error(w, "Erreur récupération statistiques", http.StatusInternalServerError)
+		return
+	}
+
+	stats := map[string]int{
+		"users": usersCount,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+}
+
 func main() {
 	database.InitDatabase()
 
@@ -439,6 +466,7 @@ func main() {
 	http.HandleFunc("/api/posts", apiPostsHandler)
 	http.HandleFunc("/api/comments/add", apiAddCommentHandler)
 	http.HandleFunc("/api/react", apiReactHandler)
+	http.HandleFunc("/api/stats", apiStatsHandler)
 
 	log.Println("Serveur lancé sur http://localhost:8080")
 

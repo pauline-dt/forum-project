@@ -78,13 +78,20 @@ func InitDatabase() {
 	}
 
 	_, err = DB.Exec(`
-		INSERT OR IGNORE INTO categories (id, name) VALUES
-		(1, 'Général'),
-		(2, 'Développement'),
-		(3, 'Aide'),
-		(4, 'Projet'),
-		(5, 'Discussion');
-	`)
+	INSERT OR IGNORE INTO categories (id, name) VALUES
+	(1, 'Général'),
+	(2, 'Développement'),
+	(3, 'Aide'),
+	(4, 'Projet'),
+	(5, 'Discussion'),
+	(6, 'Sport'),
+	(7, 'Lifestyle'),
+	(8, 'Musique'),
+	(9, 'Gaming'),
+	(10, 'Cinéma'),
+	(11, 'Voyage'),
+	(12, 'Études');
+`)
 
 	if err != nil {
 		log.Fatal("Erreur insertion catégories :", err)

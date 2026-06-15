@@ -16,8 +16,11 @@ async function loadPosts() {
     }
 
     try {
-        const response = await fetch("/api/posts");
-        const posts = await response.json();
+        const postsResponse = await fetch("/api/posts");
+        const posts = await postsResponse.json();
+
+        const statsResponse = await fetch("/api/stats");
+        const stats = await statsResponse.json();
 
         let totalComments = 0;
 
@@ -25,9 +28,17 @@ async function loadPosts() {
             totalComments += post.comments ? post.comments.length : 0;
         });
 
-        postsCount.textContent = posts.length;
-        usersCount.textContent = "-";
-        commentsCount.textContent = totalComments;
+        if (postsCount) {
+            postsCount.textContent = posts.length;
+        }
+
+        if (usersCount) {
+            usersCount.textContent = stats.users;
+        }
+
+        if (commentsCount) {
+            commentsCount.textContent = totalComments;
+        }
 
         function displayPosts(filteredPosts) {
             postsList.innerHTML = "";
@@ -35,8 +46,8 @@ async function loadPosts() {
             if (filteredPosts.length === 0) {
                 postsList.innerHTML = `
                     <article class="post-card">
-                        <h3>Aucun post</h3>
-                        <p>Aucun post trouvé.</p>
+                        <h3>Aucun post trouvé</h3>
+                        <p>Aucune discussion ne correspond à ta recherche.</p>
                     </article>
                 `;
                 return;
@@ -44,6 +55,7 @@ async function loadPosts() {
 
             filteredPosts.forEach(post => {
                 const article = document.createElement("article");
+
                 article.className = "post-card";
                 article.dataset.title = post.title.toLowerCase();
                 article.dataset.category = post.category;
@@ -52,13 +64,23 @@ async function loadPosts() {
 
                 if (post.image && post.image !== "") {
                     imageHTML = `
-                        <img class="post-image" src="${post.image}" alt="Image du post">
+                        <img
+                            class="post-image"
+                            src="${post.image}"
+                            alt="Image du post"
+                        >
                     `;
                 }
 
                 let commentsHTML = "";
 
                 if (post.comments && post.comments.length > 0) {
+                    commentsHTML = `
+                        <div class="comments-title">
+                            Commentaires
+                        </div>
+                    `;
+
                     post.comments.forEach(comment => {
                         commentsHTML += `
                             <div class="comment">
@@ -71,22 +93,36 @@ async function loadPosts() {
 
                 article.innerHTML = `
                     <div class="post-header">
-                        <h3>${post.title}</h3>
-                        <span class="category-badge">${post.category}</span>
+                        <div>
+                            <h3>${post.title}</h3>
+                            <small class="post-author">
+                                Posté par ${post.author}
+                            </small>
+                        </div>
+
+                        <span class="category-badge">
+                            ${post.category}
+                        </span>
                     </div>
 
-                    <p>${post.content}</p>
+                    <p class="post-content">
+                        ${post.content}
+                    </p>
 
                     ${imageHTML}
 
-                    <small>Posté par ${post.author}</small>
-
                     <div class="reaction-bar">
-                        <button class="reaction-btn" onclick="reactToPost(${post.id}, 'like')">
+                        <button
+                            class="reaction-btn"
+                            onclick="reactToPost(${post.id}, 'like')"
+                        >
                             👍 ${post.likes}
                         </button>
 
-                        <button class="reaction-btn" onclick="reactToPost(${post.id}, 'dislike')">
+                        <button
+                            class="reaction-btn"
+                            onclick="reactToPost(${post.id}, 'dislike')"
+                        >
                             👎 ${post.dislikes}
                         </button>
                     </div>
@@ -96,8 +132,16 @@ async function loadPosts() {
                     </div>
 
                     <form class="comment-form" data-post-id="${post.id}">
-                        <input type="text" name="content" placeholder="Écrire un commentaire..." required>
-                        <button type="submit">Commenter</button>
+                        <input
+                            type="text"
+                            name="content"
+                            placeholder="Écrire un commentaire..."
+                            required
+                        >
+
+                        <button type="submit">
+                            Commenter
+                        </button>
                     </form>
                 `;
 
@@ -108,11 +152,17 @@ async function loadPosts() {
                 form.addEventListener("submit", async event => {
                     event.preventDefault();
 
-                    const contentInput = form.querySelector("input");
+                    const input = form.querySelector("input");
+                    const content = input.value.trim();
+
+                    if (content === "") {
+                        return;
+                    }
 
                     const formData = new FormData();
+
                     formData.append("post_id", form.dataset.postId);
-                    formData.append("content", contentInput.value);
+                    formData.append("content", content);
 
                     const response = await fetch("/api/comments/add", {
                         method: "POST",
@@ -120,7 +170,7 @@ async function loadPosts() {
                     });
 
                     if (response.ok) {
-                        contentInput.value = "";
+                        input.value = "";
                         loadPosts();
                     } else {
                         alert("Vous devez être connecté pour commenter.");
@@ -130,17 +180,28 @@ async function loadPosts() {
         }
 
         function applyFilters() {
-            const searchValue = searchInput ? searchInput.value.toLowerCase() : "";
-            const selectedCategory = categoryFilter ? categoryFilter.value : "";
+            const searchValue = searchInput
+                ? searchInput.value.toLowerCase()
+                : "";
+
+            const selectedCategory = categoryFilter
+                ? categoryFilter.value
+                : "";
 
             const filteredPosts = posts.filter(post => {
+                const title = post.title.toLowerCase();
+                const content = post.content.toLowerCase();
+                const author = post.author.toLowerCase();
+                const category = post.category;
+
                 const matchesSearch =
-                    post.title.toLowerCase().includes(searchValue) ||
-                    post.content.toLowerCase().includes(searchValue) ||
-                    post.author.toLowerCase().includes(searchValue);
+                    title.includes(searchValue) ||
+                    content.includes(searchValue) ||
+                    author.includes(searchValue);
 
                 const matchesCategory =
-                    selectedCategory === "" || post.category === selectedCategory;
+                    selectedCategory === "" ||
+                    category === selectedCategory;
 
                 return matchesSearch && matchesCategory;
             });
@@ -172,6 +233,7 @@ async function loadPosts() {
 
 async function reactToPost(postId, type) {
     const formData = new FormData();
+
     formData.append("post_id", postId);
     formData.append("type", type);
 
