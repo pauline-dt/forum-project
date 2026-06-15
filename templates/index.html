@@ -45,21 +45,24 @@
         </div>
 
         <div id="postsList" class="posts-list">
-            <article class="post-card" data-title="Présentation du projet Nexora">
-                <h3>Présentation du projet Nexora</h3>
-                <p>Bienvenue dans notre forum étudiant développé en Go, SQLite et JavaScript.</p>
-            </article>
 
-            <article class="post-card" data-title="Discussion autour du développement web">
-                <h3>Discussion autour du développement web</h3>
-                <p>Ici on parle HTML, CSS, JavaScript, backend et bonnes pratiques.</p>
-            </article>
+    {{range .Posts}}
 
-            <article class="post-card" data-title="Aide et entraide entre étudiants">
-                <h3>Aide et entraide entre étudiants</h3>
-                <p>Posez vos questions et échangez avec les autres utilisateurs.</p>
-            </article>
-        </div>
+    <article class="post-card">
+        <h3>{{.Title}}</h3>
+        <p>{{.Content}}</p>
+    </article>
+
+    {{else}}
+
+    <article class="post-card">
+        <h3>Aucun post</h3>
+        <p>Soyez le premier à publier sur Nexora.</p>
+    </article>
+
+    {{end}}
+
+</div>
 
         <div class="hero-actions">
     {{if .IsLoggedIn}}

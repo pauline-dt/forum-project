@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 
 	"forum-project/internal/database"
+	"forum-project/internal/models"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -14,7 +16,7 @@ import (
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 type PageData struct {
 	IsLoggedIn bool
-
+	Posts      []models.Post
 }
 func renderTemplate(w http.ResponseWriter, tmpl string) {
 	err := templates.ExecuteTemplate(w, tmpl, nil)
@@ -33,11 +35,42 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, isLoggedIn := getUserIDFromCookie(r)
 
-	data := PageData{
-		IsLoggedIn: isLoggedIn,
+	rows, err := database.DB.Query(
+		"SELECT id, title, content FROM posts ORDER BY id DESC",
+	)
+
+	if err != nil {
+		http.Error(w, "Erreur récupération posts", http.StatusInternalServerError)
+		return
 	}
 
-	err := templates.ExecuteTemplate(w, "index.html", data)
+	defer rows.Close()
+
+	var posts []models.Post
+
+	for rows.Next() {
+		var post models.Post
+
+		err := rows.Scan(
+			&post.ID,
+			&post.Title,
+			&post.Content,
+		)
+
+		if err != nil {
+			continue
+		}
+
+		posts = append(posts, post)
+	}
+
+	data := PageData{
+		IsLoggedIn: isLoggedIn,
+		Posts:      posts,
+	}
+
+	err = templates.ExecuteTemplate(w, "index.html", data)
+
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 	}
@@ -228,6 +261,58 @@ func createPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
 }
+func apiPostsHandler(w http.ResponseWriter, r *http.Request) {
+	rows, err := database.DB.Query(`
+		SELECT 
+			posts.id,
+			posts.title,
+			posts.content,
+			users.username,
+			IFNULL(categories.name, ''),
+			IFNULL(posts.image_path, ''),
+			0,
+			0
+		FROM posts
+		JOIN users ON posts.user_id = users.id
+		LEFT JOIN post_categories ON posts.id = post_categories.post_id
+		LEFT JOIN categories ON post_categories.category_id = categories.id
+		ORDER BY posts.created_at DESC
+	`)
+
+	if err != nil {
+		http.Error(w, "Erreur récupération posts", http.StatusInternalServerError)
+		return
+	}
+
+	defer rows.Close()
+
+	var posts []models.Post
+
+	for rows.Next() {
+		var post models.Post
+
+		err := rows.Scan(
+			&post.ID,
+			&post.Title,
+			&post.Content,
+			&post.Author,
+			&post.Category,
+			&post.Image,
+			&post.Likes,
+			&post.Dislikes,
+		)
+
+		if err != nil {
+			http.Error(w, "Erreur lecture post", http.StatusInternalServerError)
+			return
+		}
+
+		posts = append(posts, post)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+}
 
 func main() {
 
@@ -241,6 +326,7 @@ func main() {
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/create-post", createPostHandler)
+	http.HandleFunc("/api/posts", apiPostsHandler)
 
 	log.Println("Serveur lancé sur http://localhost:8080")
 

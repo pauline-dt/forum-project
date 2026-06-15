@@ -52,11 +52,38 @@ func InitDatabase() {
 		FOREIGN KEY(category_id) REFERENCES categories(id)
 	);`
 
+	createCommentsTable := `
+	CREATE TABLE IF NOT EXISTS comments (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		post_id INTEGER NOT NULL,
+		user_id INTEGER NOT NULL,
+		content TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(post_id) REFERENCES posts(id),
+		FOREIGN KEY(user_id) REFERENCES users(id)
+	);`
+
+	createReactionsTable := `
+	CREATE TABLE IF NOT EXISTS reactions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		post_id INTEGER,
+		comment_id INTEGER,
+		type TEXT NOT NULL CHECK(type IN ('like', 'dislike')),
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(user_id, post_id, comment_id),
+		FOREIGN KEY(user_id) REFERENCES users(id),
+		FOREIGN KEY(post_id) REFERENCES posts(id),
+		FOREIGN KEY(comment_id) REFERENCES comments(id)
+	);`
+
 	queries := []string{
 		createUsersTable,
 		createPostsTable,
 		createCategoriesTable,
 		createPostCategoriesTable,
+		createCommentsTable,
+		createReactionsTable,
 	}
 
 	for _, query := range queries {
