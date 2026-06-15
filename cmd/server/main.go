@@ -313,6 +313,40 @@ func apiPostsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(posts)
 }
+func apiAddCommentHandler(w http.ResponseWriter, r *http.Request) {
+	userID, isLoggedIn := getUserIDFromCookie(r)
+	if !isLoggedIn {
+		http.Error(w, "Vous devez être connecté", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+		return
+	}
+
+	postID := r.FormValue("post_id")
+	content := r.FormValue("content")
+
+	if postID == "" || content == "" {
+		http.Error(w, "Commentaire vide", http.StatusBadRequest)
+		return
+	}
+
+	_, err := database.DB.Exec(
+		"INSERT INTO comments(post_id, user_id, content) VALUES(?, ?, ?)",
+		postID,
+		userID,
+		content,
+	)
+
+	if err != nil {
+		http.Error(w, "Erreur ajout commentaire", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
 
 func main() {
 
@@ -327,6 +361,7 @@ func main() {
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/create-post", createPostHandler)
 	http.HandleFunc("/api/posts", apiPostsHandler)
+	http.HandleFunc("/api/comments/add", apiAddCommentHandler)
 
 	log.Println("Serveur lancé sur http://localhost:8080")
 
